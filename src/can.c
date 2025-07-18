@@ -2,6 +2,8 @@
 // can: initializes and provides methods to interact with the CAN peripheral
 //
 
+#pragma GCC optimize ("Ofast")
+
 #include "stm32f0xx_hal.h"
 #include "slcan.h"
 #include "usbd_cdc_if.h"
@@ -183,7 +185,7 @@ void can_set_autoretransmit(uint8_t autoretransmit)
     	can_autoretransmit = ENABLE;
     } else {
     	can_autoretransmit = DISABLE;
-    }
+   }
 
     led_green_on();
 }
@@ -218,21 +220,23 @@ uint32_t can_tx(CAN_TxHeaderTypeDef *tx_msg_header, uint8_t* tx_msg_data)
 // Process messages in the TX output queue
 void can_process(void)
 {
-    if((txqueue.tail != txqueue.head) && (HAL_CAN_GetTxMailboxesFreeLevel(&can_handle) > 0))
+    while((txqueue.tail != txqueue.head) && (HAL_CAN_GetTxMailboxesFreeLevel(&can_handle) > 0))
 	{
 		// Transmit can frame
+        led_green_on();
 		uint32_t mailbox_txed = 0;
 		uint32_t status = HAL_CAN_AddTxMessage(&can_handle, &txqueue.header[txqueue.tail], txqueue.data[txqueue.tail], &mailbox_txed);
-		txqueue.tail = (txqueue.tail + 1) % TXQUEUE_LEN;
+        led_green_off();
+        txqueue.tail = (txqueue.tail + 1) % TXQUEUE_LEN;
 
-		led_green_on();
+        led_green_on();
 
 		// This drops the packet if it fails (no retry). Failure is unlikely
 		// since we check if there is a TX mailbox free.
-		if(status != HAL_OK)
-		{
-			error_assert(ERR_CAN_TXFAIL);
-		}
+        if(status != HAL_OK)
+        {
+            error_assert(ERR_CAN_TXFAIL);
+        }
 	}
 }
 

@@ -212,6 +212,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f0xx_hal.h"
 
+#pragma GCC optimize ("Ofast")
+
 /** @addtogroup STM32F0xx_HAL_Driver
   * @{
   */

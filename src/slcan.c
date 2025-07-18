@@ -79,7 +79,6 @@ int8_t slcan_parse_frame(uint8_t *buf, CAN_RxHeaderTypeDef *frame_header, uint8_
     return msg_position;
 }
 
-
 // Parse an incoming slcan command from the USB CDC port
 int8_t slcan_parse_str(uint8_t *buf, uint8_t len)
 {
@@ -90,21 +89,46 @@ int8_t slcan_parse_str(uint8_t *buf, uint8_t len)
     frame_header.StdId = 0;
     frame_header.ExtId = 0;
 
+    uint8_t t_cmd_decode_buf[16];
+    uint8_t t_cmd_decode_buf_length = 0;
 
-    // Convert from ASCII (2nd character to end)
-    for (uint8_t i = 1; i < len; i++)
-    {
-        // Lowercase letters
-        if(buf[i] >= 'a')
-            buf[i] = buf[i] - 'a' + 10;
-        // Uppercase letters
-        else if(buf[i] >= 'A')
-            buf[i] = buf[i] - 'A' + 10;
-        // Numbers
-        else
-            buf[i] = buf[i] - '0';
+    if (buf[0] == 't') {
+        // De-escape
+        for (uint8_t i = 1; i < len; i++) {
+            // If it's an escape character (0xFF)
+            if (buf[i] == 0xFF) {
+                if (buf[i + 1] == 0xFE) {
+                    // If the next byte is 0xFE, that means the real data is 0xFF
+                    t_cmd_decode_buf[t_cmd_decode_buf_length] = 0xFF;
+                } else if (buf[i + 1] == 0xFD) {
+                    // If the next byte is 0xFD, that means the real data is '\r'
+                    t_cmd_decode_buf[t_cmd_decode_buf_length] = '\r';
+                }
+
+                i += 1;
+            } else {
+                t_cmd_decode_buf[t_cmd_decode_buf_length] = buf[i];
+            }
+
+            t_cmd_decode_buf_length++;
+        }
+    } else {
+        // Convert from ASCII (2nd character to end)
+        if (buf[0] != 't') {
+            for (uint8_t i = 1; i < len; i++)
+            {
+                // Lowercase letters
+                if(buf[i] >= 'a')
+                    buf[i] = buf[i] - 'a' + 10;
+                // Uppercase letters
+                else if(buf[i] >= 'A')
+                    buf[i] = buf[i] - 'A' + 10;
+                // Numbers
+                else
+                    buf[i] = buf[i] - '0';
+            }
+        }
     }
-
 
     // Process command
     switch(buf[0])
@@ -204,15 +228,27 @@ int8_t slcan_parse_str(uint8_t *buf, uint8_t len)
         }
     }
     else {
-        while (msg_position <= SLCAN_STD_ID_LEN) {
-        	frame_header.StdId *= 16;
-        	frame_header.StdId += buf[msg_position++];
+        if (buf[0] == 't') {
+            msg_position = 0;
+            frame_header.StdId = t_cmd_decode_buf[msg_position + 0];
+            frame_header.StdId <<= 8;
+            frame_header.StdId |= t_cmd_decode_buf[msg_position + 1];
+            msg_position += 2;
+        } else {
+            while (msg_position <= SLCAN_STD_ID_LEN) {
+                frame_header.StdId *= 16;
+                frame_header.StdId += buf[msg_position++];
+            }
         }
     }
 
 
     // Attempt to parse DLC and check sanity
-    frame_header.DLC = buf[msg_position++];
+    if (buf[0] == 't') {
+        frame_header.DLC = t_cmd_decode_buf[msg_position++];
+    } else {
+        frame_header.DLC = buf[msg_position++];
+    }
     if (frame_header.DLC > 8) {
         return -1;
     }
@@ -220,8 +256,13 @@ int8_t slcan_parse_str(uint8_t *buf, uint8_t len)
     // Copy frame data to buffer
     uint8_t frame_data[8] = {0};
     for (uint8_t j = 0; j < frame_header.DLC; j++) {
-        frame_data[j] = (buf[msg_position] << 4) + buf[msg_position+1];
-        msg_position += 2;
+        if (buf[0] == 't') {
+            frame_data[j] = t_cmd_decode_buf[msg_position];
+            msg_position++;
+        } else {
+            frame_data[j] = (buf[msg_position] << 4) + buf[msg_position+1];
+            msg_position += 2;
+        }
     }
 
     // Transmit the message
