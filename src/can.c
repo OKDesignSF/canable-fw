@@ -51,8 +51,8 @@ void can_init(void)
     filter.FilterActivation = ENABLE;
 
 
-    // default to 125 kbit/s
-    prescaler = 48;
+    // default to 1Mbps
+    prescaler = 6;
     can_handle.Instance = CAN;
     bus_state = OFF_BUS;
 
