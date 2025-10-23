@@ -24,6 +24,7 @@ int main(void)
     okcan_init();
 
     led_blue_blink(2);
+    can_enable();
 
     // Storage for status and received message buffer
     CAN_RxHeaderTypeDef rx_msg_header;

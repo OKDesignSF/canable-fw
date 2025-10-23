@@ -8,7 +8,7 @@
 //
 
 #define RX_RINGBUF_CAPACITY     256
-#define TX_RINGBUF_CAPACITY      88
+#define TX_RINGBUF_CAPACITY      78
 #define USB_TRANSFER_LENGTH_MAX  64
 
 //
