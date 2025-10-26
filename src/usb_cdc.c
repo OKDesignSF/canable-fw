@@ -1,5 +1,6 @@
 #include "usb_cdc.h"
 
+#include "okcan.h"
 #include "ringbuf.h"
 #include "usbd_cdc_if.h"
 
@@ -7,7 +8,6 @@
 // Defines
 //
 
-#define RX_RINGBUF_CAPACITY     256
 #define TX_RINGBUF_CAPACITY      78
 #define USB_TRANSFER_LENGTH_MAX  64
 
@@ -15,7 +15,6 @@
 // State
 //
 
-RINGBUF_DEFINE(rx_ringbuf, RX_RINGBUF_CAPACITY, true);
 RINGBUF_DEFINE(tx_ringbuf, TX_RINGBUF_CAPACITY, true);
 
 static bool tx_in_progress;
@@ -62,7 +61,6 @@ static void startTransferIfNeeded(void)
 
 void usb_cdc_init(void)
 {
-    ringbuf_init(&rx_ringbuf);
     ringbuf_init(&tx_ringbuf);
 
     tx_in_progress = false;
@@ -95,30 +93,7 @@ void usb_cdc_sendData(const uint8_t* data, uint32_t data_length)
 
 void usb_cdc_receivedData(const uint8_t* data, uint32_t data_length)
 {
-    if (ringbuf_bytesFree(&rx_ringbuf) < data_length) {
-        return;
+    for (uint32_t i = 0; i < data_length; i++) {
+        okcan_processUsbByte(data[i]);
     }
-
-    ringbuf_put(&rx_ringbuf, data, data_length);
-}
-
-bool usb_cdc_hasData(void)
-{
-    return !ringbuf_empty(&rx_ringbuf);
-}
-
-uint8_t usb_cdc_getNextByte(void)
-{
-    uint8_t* data;
-    uint32_t data_length;
-
-    data = ringbuf_contiguousPeek(&rx_ringbuf, &data_length);
-    if (data_length < 1) {
-        return 0;
-    }
-
-    uint8_t next_byte = data[0];
-    ringbuf_pop(&rx_ringbuf, 1);
-
-    return next_byte;
 }

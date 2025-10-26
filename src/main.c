@@ -36,14 +36,6 @@ int main(void)
         led_process();
         can_process();
 
-        // Process any data received from USB
-        while (usb_cdc_hasData()) {
-            bool got_message = okcan_processUsbByte(usb_cdc_getNextByte());
-            if (got_message) {
-                break;
-            }
-        }
-
         // If CAN message receive is pending, process the message
         if (is_can_msg_pending(CAN_RX_FIFO0)) {
             // If message received from bus, parse the frame

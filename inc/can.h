@@ -22,7 +22,7 @@ typedef enum can_bus_state {
 
 
 // CAN transmit buffering
-#define TXQUEUE_LEN 61 // Number of buffers allocated
+#define TXQUEUE_LEN 64 // Number of buffers allocated
 #define TXQUEUE_DATALEN 8 // CAN DLC length of data buffers
 
 typedef struct cantxbuf_

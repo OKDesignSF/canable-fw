@@ -4,7 +4,7 @@
 #include "usbd_cdc.h"
 
 #define TX_BUF_SIZE 64
-#define RX_BUF_SIZE 64
+#define RX_BUF_SIZE 256
 
 extern USBD_CDC_ItfTypeDef USBD_Interface_fops_FS;
 
